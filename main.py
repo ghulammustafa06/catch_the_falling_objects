@@ -28,3 +28,17 @@ while running:
     pygame.draw.rect(screen, (0, 255, 0), player)
     pygame.display.flip()
 
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT]:
+        player.x -= 5
+    if keys[pygame.K_RIGHT]:
+        player.x += 5
+
+    screen.fill((0, 0, 0))
+    pygame.draw.rect(screen, (0, 255, 0), player)
+    pygame.display.flip()
