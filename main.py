@@ -11,6 +11,8 @@ screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Catch the Falling Objects")
 
 player = pygame.Rect(375, 500, 50, 50)  # Player as a rectangle
+player_speed = 0  # Initial speed
+player_acceleration = 0.5  # Acceleration rate
 
 class FallingObject:
     def __init__(self, obj_type):
@@ -20,20 +22,44 @@ class FallingObject:
     
     def set_speed(self, obj_type):
         if obj_type == 'normal':
-            return 2  # Slowed down
+            return 2 
         elif obj_type == 'fast':
-            return 3  # Slowed down
+            return 3  
         elif obj_type == 'slow':
-            return 1  # Slowed down
+            return 1  
         elif obj_type == 'big':
             return 1
         elif obj_type == 'small':
-            return 2  # Slowed down
+            return 2  
     
     def update(self):
         self.rect.y += self.speed
 
+class PowerUp:
+    def __init__(self):
+        self.rect = pygame.Rect(random.randint(0, 750), 0, 30, 30)
+        self.type = random.choice(['score_up', 'speed_up', 'slow_down'])
+        self.speed = 2  # Fixed speed for power-ups
+    
+    def update(self):
+        self.rect.y += self.speed
+
+def apply_power_up(type):
+    global player_speed, falling_objects_speed
+    if type == 'score_up':
+        global score
+        score += 5 
+    elif type == 'speed_up':
+        player_speed += 2  
+    elif type == 'slow_down':
+        for obj in falling_objects:
+            obj.speed -= 1  
+
 falling_objects = []
+power_ups = []
+score = 0
+missed = 0
+max_missed = 40 
 
 # Placeholder sounds using Pygame's built-in beep functionality
 pygame.mixer.init()
@@ -80,12 +106,13 @@ def show_game_over_screen(final_score):
                 waiting = False
 
 def reset_game():
-    global player, falling_objects, score, missed, max_missed
+    global player, player_speed, falling_objects, power_ups, score, missed
     player = pygame.Rect(375, 500, 50, 50)
+    player_speed = 0
     falling_objects = []
+    power_ups = []
     score = 0
     missed = 0
-    max_missed = 40  
 
 reset_game()
 show_start_screen()
@@ -104,14 +131,44 @@ while running:
     if not paused:
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
-            player.x -= 5
+            player_speed -= player_acceleration
         if keys[pygame.K_RIGHT]:
-            player.x += 5
+            player_speed += player_acceleration
 
-        if random.randint(1, 20) == 1:  # Randomly create falling objects
+        # Apply friction to slow down gradually when no key is pressed
+        if not keys[pygame.K_LEFT] and not keys[pygame.K_RIGHT]:
+            if player_speed > 0:
+                player_speed -= player_acceleration
+            elif player_speed < 0:
+                player_speed += player_acceleration
+
+        player.x += player_speed
+
+        # Ensure player stays within screen bounds
+        if player.x < 0:
+            player.x = 0
+            player_speed = 0
+        elif player.x > 750:
+            player.x = 750
+            player_speed = 0
+
+        # Create falling objects
+        if random.randint(1, 20) == 1 and len(falling_objects) < 5:  # Limit to 5 objects at a time
             obj_type = random.choice(['normal', 'fast', 'slow', 'big', 'small'])
             falling_objects.append(FallingObject(obj_type))
 
+        # Create power-ups
+        if random.randint(1, 500) == 1 and len(power_ups) == 0:  # Chance to spawn a power-up
+            power_ups.append(PowerUp())
+
+        # Update power-ups
+        for power_up in power_ups:
+            power_up.update()
+            if player.colliderect(power_up.rect):
+                apply_power_up(power_up.type)
+                power_ups.remove(power_up)
+        
+        # Update falling objects
         for obj in falling_objects:
             obj.update()
             if player.colliderect(obj.rect):
@@ -122,16 +179,20 @@ while running:
                 missed += 1
                 falling_objects.remove(obj)
 
+        # Check game over condition
         if missed >= max_missed:
             show_game_over_screen(score)
             reset_game()
             show_start_screen()
 
         # Draw background image or fill with color
-        screen.blit(background_image, (0, 0))  
-        # screen.fill(background_color)  
+        screen.blit(background_image, (0, 0))  # Comment this line if using a solid color
+        # screen.fill(background_color)  # Uncomment this line if using a solid color
 
+        # Draw player
         pygame.draw.rect(screen, (0, 255, 0), player)
+
+        # Draw falling objects
         for obj in falling_objects:
             if obj.type == 'normal':
                 color = (255, 0, 0)
@@ -145,6 +206,17 @@ while running:
                 color = (255, 0, 255)
             pygame.draw.rect(screen, color, obj.rect)
 
+        # Draw power-ups
+        for power_up in power_ups:
+            if power_up.type == 'score_up':
+                color = (255, 255, 0)  # Yellow for score up
+            elif power_up.type == 'speed_up':
+                color = (0, 255, 0)  # Green for speed up
+            elif power_up.type == 'slow_down':
+                color = (0, 0, 255)  # Blue for slow down
+            pygame.draw.rect(screen, color, power_up.rect)
+
+        # Display score and missed count
         font = pygame.font.Font(None, 36)
         text = font.render(f"Score: {score} Missed: {missed}", True, (255, 255, 255))
         screen.blit(text, (10, 10))
