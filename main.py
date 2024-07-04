@@ -27,3 +27,4 @@ while running:
     screen.fill((0, 0, 0))
     pygame.draw.rect(screen, (0, 255, 0), player)
     pygame.display.flip()
+
