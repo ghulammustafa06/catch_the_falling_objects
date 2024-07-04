@@ -11,11 +11,32 @@ player = pygame.Rect(375, 500, 50, 50)  # Player as a rectangle
 class FallingObject:
     def __init__(self, obj_type):
         self.rect = pygame.Rect(random.randint(0, 750), 0, 50, 50)
-        self.speed = random.randint(3, 7)
         self.type = obj_type
+        self.speed = self.set_speed(obj_type)
+    
+    def set_speed(self, obj_type):
+        if obj_type == 'normal':
+            return 3
+        elif obj_type == 'fast':
+            return 5
+        elif obj_type == 'slow':
+            return 2
+        elif obj_type == 'big':
+            return 1
+        elif obj_type == 'small':
+            return 4
+    
+    def update(self):
+        if self.type == 'fast':
+            self.rect.y += self.speed + 1  # Fast objects fall faster
+        elif self.type == 'slow':
+            self.rect.y += self.speed - 1  # Slow objects fall slower
+        else:
+            self.rect.y += self.speed
 
 falling_objects = []
 
+# Placeholder sounds using Pygame's built-in beep functionality
 pygame.mixer.init()
 catch_sound = pygame.mixer.Sound(pygame.mixer.Sound(buffer=b'RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00@\x1f\x00\x00@\x1f\x00\x00\x01\x00\x08\x00data\x00\x00\x00\x00'))
 game_over_sound = pygame.mixer.Sound(pygame.mixer.Sound(buffer=b'RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00@\x1f\x00\x00@\x1f\x00\x00\x01\x00\x08\x00data\x00\x00\x00\x00'))
@@ -65,7 +86,7 @@ def reset_game():
     falling_objects = []
     score = 0
     missed = 0
-    max_missed = 50
+    max_missed = 5
 
 reset_game()
 show_start_screen()
@@ -89,16 +110,11 @@ while running:
             player.x += 5
 
         if random.randint(1, 20) == 1:  # Randomly create falling objects
-            obj_type = random.choice(['normal', 'fast', 'slow'])
+            obj_type = random.choice(['normal', 'fast', 'slow', 'big', 'small'])
             falling_objects.append(FallingObject(obj_type))
 
         for obj in falling_objects:
-            obj.rect.y += obj.speed  # Base speed adjustment
-            if obj.type == 'fast':
-                obj.rect.y += 0.5  # Increase speed for 'fast' type
-            elif obj.type == 'slow':
-                obj.rect.y -= 2  # Further decrease speed for 'slow' type, making it slower
-
+            obj.update()
             if player.colliderect(obj.rect):
                 score += 1
                 catch_sound.play()
@@ -115,7 +131,16 @@ while running:
         screen.fill((0, 0, 0))
         pygame.draw.rect(screen, (0, 255, 0), player)
         for obj in falling_objects:
-            color = (255, 0, 0) if obj.type == 'normal' else (0, 0, 255) if obj.type == 'fast' else (255, 255, 0)
+            if obj.type == 'normal':
+                color = (255, 0, 0)
+            elif obj.type == 'fast':
+                color = (0, 0, 255)
+            elif obj.type == 'slow':
+                color = (255, 255, 0)
+            elif obj.type == 'big':
+                color = (0, 255, 255)
+            elif obj.type == 'small':
+                color = (255, 0, 255)
             pygame.draw.rect(screen, color, obj.rect)
 
         font = pygame.font.Font(None, 36)
