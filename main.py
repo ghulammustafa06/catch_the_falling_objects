@@ -3,6 +3,10 @@ import random
 
 pygame.init()
 
+# Load background image or set background color
+background_image = pygame.image.load('game_background.jpg')  
+# background_color = (135, 206, 235)  # Sky blue color
+
 screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Catch the Falling Objects")
 
@@ -16,23 +20,18 @@ class FallingObject:
     
     def set_speed(self, obj_type):
         if obj_type == 'normal':
-            return 3
+            return 2  # Slowed down
         elif obj_type == 'fast':
-            return 5
+            return 3  # Slowed down
         elif obj_type == 'slow':
-            return 2
+            return 1  # Slowed down
         elif obj_type == 'big':
             return 1
         elif obj_type == 'small':
-            return 4
+            return 2  # Slowed down
     
     def update(self):
-        if self.type == 'fast':
-            self.rect.y += self.speed + 1  # Fast objects fall faster
-        elif self.type == 'slow':
-            self.rect.y += self.speed - 1  # Slow objects fall slower
-        else:
-            self.rect.y += self.speed
+        self.rect.y += self.speed
 
 falling_objects = []
 
@@ -86,7 +85,7 @@ def reset_game():
     falling_objects = []
     score = 0
     missed = 0
-    max_missed = 5
+    max_missed = 40  
 
 reset_game()
 show_start_screen()
@@ -128,7 +127,10 @@ while running:
             reset_game()
             show_start_screen()
 
-        screen.fill((0, 0, 0))
+        # Draw background image or fill with color
+        screen.blit(background_image, (0, 0))  
+        # screen.fill(background_color)  
+
         pygame.draw.rect(screen, (0, 255, 0), player)
         for obj in falling_objects:
             if obj.type == 'normal':
