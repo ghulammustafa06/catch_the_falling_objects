@@ -1,6 +1,6 @@
-# main.py
 import pygame
 import random
+
 pygame.init()
 
 screen = pygame.display.set_mode((800, 600))
@@ -9,11 +9,16 @@ pygame.display.set_caption("Catch the Falling Objects")
 player = pygame.Rect(375, 500, 50, 50)  # Player as a rectangle
 
 class FallingObject:
-    def __init__(self):
+    def __init__(self, obj_type):
         self.rect = pygame.Rect(random.randint(0, 750), 0, 50, 50)
         self.speed = random.randint(3, 7)
+        self.type = obj_type
 
 falling_objects = []
+
+pygame.mixer.init()
+catch_sound = pygame.mixer.Sound(pygame.mixer.Sound(buffer=b'RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00@\x1f\x00\x00@\x1f\x00\x00\x01\x00\x08\x00data\x00\x00\x00\x00'))
+game_over_sound = pygame.mixer.Sound(pygame.mixer.Sound(buffer=b'RIFF$\x00\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00\x01\x00@\x1f\x00\x00@\x1f\x00\x00\x01\x00\x08\x00data\x00\x00\x00\x00'))
 
 def show_start_screen():
     screen.fill((0, 0, 0))
@@ -41,53 +46,82 @@ def show_game_over_screen(final_score):
     font = pygame.font.Font(None, 36)
     text = font.render(f"Final Score: {final_score}", True, (255, 255, 255))
     screen.blit(text, (300, 350))
+    text = font.render("Press any key to restart", True, (255, 255, 255))
+    screen.blit(text, (300, 400))
     pygame.display.flip()
-    pygame.time.wait(2000)
+    game_over_sound.play()
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYUP:
+                waiting = False
 
+def reset_game():
+    global player, falling_objects, score, missed, max_missed
+    player = pygame.Rect(375, 500, 50, 50)
+    falling_objects = []
+    score = 0
+    missed = 0
+    max_missed = 50
+
+reset_game()
 show_start_screen()
 
 running = True
-score = 0
-missed = 0
-max_missed = 5
+paused = False
 
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.KEYUP:
+            if event.key == pygame.K_p:
+                paused = not paused
 
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_LEFT]:
-        player.x -= 5
-    if keys[pygame.K_RIGHT]:
-        player.x += 5
+    if not paused:
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            player.x -= 5
+        if keys[pygame.K_RIGHT]:
+            player.x += 5
 
-    if random.randint(1, 20) == 1:  # Randomly create falling objects
-        falling_objects.append(FallingObject())
+        if random.randint(1, 20) == 1:  # Randomly create falling objects
+            obj_type = random.choice(['normal', 'fast', 'slow'])
+            falling_objects.append(FallingObject(obj_type))
 
-    for obj in falling_objects:
-        obj.rect.y += obj.speed
-        if player.colliderect(obj.rect):
-            score += 1
-            falling_objects.remove(obj)
-        elif obj.rect.y > 600:
-            missed += 1
-            falling_objects.remove(obj)
+        for obj in falling_objects:
+            obj.rect.y += obj.speed  # Base speed adjustment
+            if obj.type == 'fast':
+                obj.rect.y += 0.5  # Increase speed for 'fast' type
+            elif obj.type == 'slow':
+                obj.rect.y -= 2  # Further decrease speed for 'slow' type, making it slower
 
-    if missed >= max_missed:
-        show_game_over_screen(score)
-        running = False
+            if player.colliderect(obj.rect):
+                score += 1
+                catch_sound.play()
+                falling_objects.remove(obj)
+            elif obj.rect.y > 600:
+                missed += 1
+                falling_objects.remove(obj)
 
-    screen.fill((0, 0, 0))
-    pygame.draw.rect(screen, (0, 255, 0), player)
-    for obj in falling_objects:
-        pygame.draw.rect(screen, (255, 0, 0), obj.rect)
+        if missed >= max_missed:
+            show_game_over_screen(score)
+            reset_game()
+            show_start_screen()
 
-    font = pygame.font.Font(None, 36)
-    text = font.render(f"Score: {score} Missed: {missed}", True, (255, 255, 255))
-    screen.blit(text, (10, 10))
+        screen.fill((0, 0, 0))
+        pygame.draw.rect(screen, (0, 255, 0), player)
+        for obj in falling_objects:
+            color = (255, 0, 0) if obj.type == 'normal' else (0, 0, 255) if obj.type == 'fast' else (255, 255, 0)
+            pygame.draw.rect(screen, color, obj.rect)
 
-    pygame.display.flip()
+        font = pygame.font.Font(None, 36)
+        text = font.render(f"Score: {score} Missed: {missed}", True, (255, 255, 255))
+        screen.blit(text, (10, 10))
+
+        pygame.display.flip()
 
 pygame.quit()
- 
